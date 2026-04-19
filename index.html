@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BAFTON BIOLOGY - TERMINAL 18</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="header">
+            <span>FACILITY 18: <span id="difficulty-display">REBOOTING...</span></span>
+            <div id="stats-panel">
+                <span id="hint-count"></span>
+                <div id="timer-container">BREACH: <span id="clock">30:00</span></div>
+            </div>
+        </div>
+
+        <div id="terminal-screen">
+            <div id="content-area"></div>
+            <div id="feedback-msg"></div>
+            <div id="hint-display" class="hidden"></div>
+        </div>
+
+        <div id="footer">
+            <div id="nav-buttons">
+                <button id="back-btn" onclick="goBack()">← BACK</button>
+                <button id="action-btn">INITIALIZE</button>
+                <button id="next-btn" class="hidden" onclick="advance()">PROCEED →</button>
+            </div>
+            <button id="skip-btn" onclick="skip()">[DEBUG: SKIP]</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

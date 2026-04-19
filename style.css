@@ -1,0 +1,36 @@
+body { background: #000; color: #00ff41; font-family: 'Courier New', monospace; height: 100vh; display: flex; justify-content: center; align-items: center; margin: 0; overflow: hidden; }
+#game-container { width: 850px; height: 650px; border: 3px double #00ff41; background: #050505; display: flex; flex-direction: column; padding: 15px; box-shadow: 0 0 30px #003300; }
+#header { display: flex; justify-content: space-between; font-size: 14px; border-bottom: 1px solid #004400; padding-bottom: 10px; }
+#stats-panel { display: flex; gap: 20px; align-items: center; }
+#terminal-screen { flex-grow: 1; padding: 20px; overflow-y: auto; position: relative; }
+
+/* Visuals */
+.vial-container { display: flex; gap: 30px; justify-content: center; margin: 20px 0; }
+.vial { width: 35px; height: 90px; border: 2px solid #666; border-radius: 0 0 15px 15px; position: relative; overflow: hidden; background: rgba(255,255,255,0.05); }
+.liquid { position: absolute; bottom: 0; width: 100%; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+.vial.a .liquid { height: 62.5%; background: #00ff41; }
+.vial.b .liquid { height: 58.3%; background: #00ffff; }
+.vial.c .liquid { height: 30%; background: #ff00ff; }
+
+.interface-group { display: flex; gap: 15px; justify-content: center; margin: 20px 0; }
+.interface-node { width: 150px; height: 100px; border: 1px solid #00ff41; padding: 10px; font-size: 14px; background: #001100; box-shadow: 0 0 10px #00ff41; animation: glow 2s infinite alternate; display: flex; align-items: center; justify-content: center; text-align: center; }
+
+@keyframes glow { from { opacity: 0.7; } to { opacity: 1; } }
+
+/* Text & UI */
+#feedback-msg { min-height: 40px; margin-top: 10px; font-weight: bold; }
+#hint-display { background: rgba(0, 255, 65, 0.1); border-left: 3px solid #ffff00; color: #ffff00; padding: 10px; margin: 10px 0; font-size: 0.9em; }
+.auth-text { color: #00ff41; }
+.denied-text { color: #ff0000; }
+.system-alert { color: #ff0000; border: 1px solid #ff0000; padding: 10px; animation: blink 0.5s infinite; }
+.hidden { display: none; }
+.flash-red { background-color: #440000 !important; }
+.emergency-panic-mode { animation: panic-flash 2s infinite; }
+
+@keyframes panic-flash { 0%, 100% { background-color: #000; } 50% { background-color: #1a0000; } }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+input { background: #000; border: 1px solid #00ff41; color: #00ff41; padding: 10px; font-family: inherit; }
+button { background: #004400; color: #00ff41; border: 1px solid #00ff41; padding: 10px 20px; cursor: pointer; font-family: inherit; }
+button:hover { background: #00ff41; color: #000; }
+.hint-btn { background: #444; color: #fff; font-size: 0.8em; padding: 5px 10px; }
