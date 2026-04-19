@@ -15,7 +15,7 @@ const content = [
     },
     {
         type: "lore",
-        text: "YEAR: 2167. MONTH: MAYO. DAY: DAYO.\n\nPower outage detected in Facility 18. Emergency containment failing in 120 minutes. Experiments are escaping. If you do not reach the roof, you will die.\n\nYou wake up in the Operating Room. The door is dead-bolted.",
+        text: "YEAR: 2167. MONTH: MAYO. DAY: DAYO.\n\nPower outage detected in Facility 18. Emergency containment failing soon. Experiments are escaping. If you do not reach the roof, you will die.\n\nYou wake up in the Operating Room. The door is dead-bolted.",
         btn: "SEARCH ROOM"
     },
     {
