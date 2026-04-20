@@ -50,9 +50,9 @@ const content = [
     },
     {
         type: "choice",
-        text: "Gate cleared. The hallway splits here. To your left is the heavy-duty TECH ROOM door. To your right, a series of dark TUNNELS leading to the laboratory.",
+        text: "Gate cleared. The hallway splits. To your right, the dark **TUNNELS** lead directly toward the laboratory. To your left, a heavy door labeled **BIOLOGICAL WING** hums with power.",
         choices: [
-            { label: "PROCEED TO TECH ROOM", target: 6 },
+            { label: "ENTER BIOLOGICAL WING", target: 13 },
             { label: "PROCEED TO TUNNELS", target: 8 }
         ]
     },
@@ -120,6 +120,36 @@ const content = [
             "i) Organize your first 6 answers, and try to make an addition pattern and a multiplication pattern.",
             "ii) Once you have the multiplication pattern, what is the common ratio?"
         ]
+    },
+    {
+        type: "choice",
+        title: "BIOLOGICAL WING",
+        text: "You are inside the Biological Wing. A display panel shows: [CRITICAL ENERGY - 1 DOOR OPENING REMAINING]. <br><br>**Option A: TECH ROOM** (Scanner detects a Security Key inside).<br>**Option B: CONTAINMENT ROOM** (Scanner detects 4 powerful experiments, a Security Key, a Hint, and a 5-minute Experiment Stabilizer vial).",
+        choices: [
+            { label: "ENTER TECH ROOM", target: 6 },
+            { label: "ENTER CONTAINMENT ROOM", target: 14 }
+        ]
+    },
+    {
+        type: "puzzle",
+        title: "STATION 3.1: CONTAINMENT ROOM (LOGIC)",
+        text: 'You see 4 chambers labeled 0, 1, 2, 3. On a desk, you see a key, a paper labeled HINT, and a vial inside a glass box. A note on the box reads: “Press the emergency button on the Interface associated with the Mimic experiment to release the lock.” <br><br> Four Interfaces (0, 1, 2, and 3) are mounted on the wall. Interface 0 has been smashed and is completely dark.<br><br> You find a manual saying: <br>1. Only the data log from the Interface belonging to the Level 4 (Maximum Danger) experiment is true. All other  Interfaces provide 100% false data.<br>2. The Stalker is in chamber 1. The experiment in chamber 2 is Level 3.<br> 3. Each chamber (0, 1, 2, 3), Experiment (Mimic, Behemoth, Stalker, Wraith), and Danger Level (1, 2, 3, 4) is used exactly once.<br><br>On the readable interfaces, you see the logs: <br>Interface 1 Log: "The Behemoth is in chamber 3. The Wraith is Level 1."<br>Interface 2 Log: "Interface 1 is Level 4. The Behemoth is in chamber 0."<br>Interface 3 Log: "The Stalker is Level 3. The Behemoth is Level 2."<br>Which Interface number must you press to open the box?',
+        answer: "0",
+        hints: [
+            "i) Identify the truth-telling interface (Level 4). Can INT 1 be Level 4? If it were, then INT 2's claim that INT 1 is Level 4 would be true... but only one interface tells the truth!",
+            "ii) Use INT 3 as your starting point. If it is the truth-teller, check if the other interfaces correctly become liars."
+        ]
+    },
+    {
+        type: "lore",
+        text: "The glass box shatters! You secured the SECURITY KEY, found an EXTRA HINT, and injected the stabilizer vial into the vents. <br><br><strong>[SYSTEM STABILIZED: +5 MINUTES GRANTED]</strong>",
+        btn: "BACK TO TUNNELS",
+        onEntry: () => { 
+            hasKey = true; 
+            hintCharges++; 
+            timeLeft += 5 * 60; 
+            triggerAlert("STABILIZER DETECTED: +5 MINUTES", 2);
+        }
     }
 ];
 
@@ -219,7 +249,12 @@ function render() {
         actionBtn.onclick = () => {
             if (currentIdx === 9 && !hasKey) {
                 msg.innerHTML = `<span class="denied-text">KEY REQUIRED: ACCESS DENIED</span>`;
-            } else { currentIdx++; render(); }
+            } 
+            else if (currentIdx === 7 || currentIdx === 15) { 
+                currentIdx = 8; 
+                render(); 
+            } 
+            else { currentIdx++; render(); }
         };
     } else if (data.type === "choice") {
         actionBtn.style.display = "none";
@@ -232,11 +267,11 @@ function render() {
         });
     } else {
         const isSolved = solvedIndices.has(currentIdx);
-        screen.innerHTML = `<h3>${data.title}</h3><p>${data.text.replace(/\n/g, '<br>')}</p>${data.visual || ''}
-            <div id="input-area">
-                <input type="text" id="ans" placeholder="${isSolved ? 'CLEARED' : 'ENTER CODE...'}" ${isSolved ? 'disabled' : ''}>
-                <button onclick="check()" ${isSolved ? 'disabled' : ''}>AUTH</button>
-            </div>`;
+screen.innerHTML = `<h3>${data.title}</h3><p>${data.text.replace(/\n/g, '<br>')}</p>${data.visual || ''}
+    <div id="input-area">
+        <input type="text" id="ans" placeholder="${isSolved ? 'CLEARED' : 'ENTER CODE...'}" ${isSolved ? 'disabled' : ''}>
+        <button onclick="check()" ${isSolved ? 'disabled' : ''}>AUTH</button>
+    </div>`;
         actionBtn.style.display = "none";
         if (isSolved) { msg.innerHTML = `<span class="auth-text">AUTHENTICATED</span>`; nextBtn.classList.remove('hidden'); }
     }
@@ -246,12 +281,39 @@ function render() {
 function check() {
     const input = document.getElementById('ans');
     const msg = document.getElementById('feedback-msg');
+    const authBtn = document.querySelector('#input-area button');
+
     if (input.value.trim() === content[currentIdx].answer) {
         msg.innerHTML = `<span class="auth-text">AUTHENTICATED</span>`;
         solvedIndices.add(currentIdx);
         input.disabled = true;
         document.getElementById('next-btn').classList.remove('hidden');
-    } else { msg.innerHTML = `<span class="denied-text">ACCESS DENIED</span>`; }
+    } else {
+        // Calculate penalty: 45 seconds for Station 3.1 (Index 14), 20 for others
+        const penaltyTime = (currentIdx === 14) ? 45 : 20;
+        
+        msg.innerHTML = `<span class="denied-text">ACCESS DENIED. SYSTEM LOCKED FOR ${penaltyTime}s</span>`;
+        
+        // Disable input and button
+        input.disabled = true;
+        authBtn.disabled = true;
+        authBtn.classList.add('btn-disabled'); // For styling
+
+        let remaining = penaltyTime;
+        const lockoutInterval = setInterval(() => {
+            remaining--;
+            msg.innerHTML = `<span class="denied-text">ACCESS DENIED. SYSTEM LOCKED FOR ${remaining}s</span>`;
+            
+            if (remaining <= 0) {
+                clearInterval(lockoutInterval);
+                input.disabled = false;
+                authBtn.disabled = false;
+                authBtn.classList.remove('btn-disabled');
+                msg.innerText = "";
+                input.focus();
+            }
+        }, 1000);
+    }
 }
 
 function updateHintUI() {
@@ -297,7 +359,9 @@ function requestHint() {
 function advance() { currentIdx++; render(); }
 function skip() { currentIdx++; render(); }
 function goBack() { 
-    if (currentIdx === 8 || currentIdx === 6) currentIdx = 5; 
+    if (currentIdx === 8) currentIdx = 5; // Tunnels -> Hallway Split
+    else if (currentIdx === 13) currentIdx = 5; // Bio Wing -> Hallway Split
+    else if (currentIdx === 6 || currentIdx === 14) currentIdx = 13; // Tech/Containment -> Bio Wing Choice
     else if (currentIdx > 1) currentIdx--; 
     render(); 
 }
@@ -309,3 +373,21 @@ function showFinalScreen() {
 }
 
 window.onload = render;
+document.addEventListener('contextmenu', event => event.preventDefault());
+
+document.addEventListener('keydown', (e) => {
+    const key = e.key.toLowerCase();
+    const ctrl = e.ctrlKey || e.metaKey; // metaKey handles Command on Mac
+
+    if (
+        (ctrl && (key === 'c' || key === 'v' || key === 'x' || key === 'u')) || 
+        key === 'f12'
+    ) {
+        e.preventDefault();
+        // Optional: Trigger a small system alert so they know why it's blocked
+        triggerAlert("SYSTEM ERROR: CLIPBOARD ACCESS RESTRICTED", 1);
+        return false;
+    }
+});
+
+document.body.style.userSelect = "none";
