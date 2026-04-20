@@ -34,3 +34,10 @@ input { background: #000; border: 1px solid #00ff41; color: #00ff41; padding: 10
 button { background: #004400; color: #00ff41; border: 1px solid #00ff41; padding: 10px 20px; cursor: pointer; font-family: inherit; }
 button:hover { background: #00ff41; color: #000; }
 .hint-btn { background: #444; color: #fff; font-size: 0.8em; padding: 5px 10px; }
+.btn-disabled {
+    background-color: #444 !important;
+    color: #888 !important;
+    cursor: not-allowed !important;
+    border-color: #555 !important;
+    text-shadow: none !important;
+}
