@@ -3,6 +3,7 @@ let hasKey = false;
 let solvedIndices = new Set(); // Tracks completed puzzles
 let hintCharges = 0;
 let currentHintIdx = 0;
+let bioWingSelection = null; // Tracks 'tech' or 'containment'
 const content = [
     {
         type: "mode-select",
@@ -126,8 +127,8 @@ const content = [
         title: "BIOLOGICAL WING",
         text: "You are inside the Biological Wing. A display panel shows: [CRITICAL ENERGY - 1 DOOR OPENING REMAINING]. <br><br>**Option A: TECH ROOM** (Scanner detects a Security Key inside).<br>**Option B: CONTAINMENT ROOM** (Scanner detects 4 powerful experiments, a Security Key, a Hint, and a 5-minute Experiment Stabilizer vial).",
         choices: [
-            { label: "ENTER TECH ROOM", target: 6 },
-            { label: "ENTER CONTAINMENT ROOM", target: 14 }
+            { label: "ENTER TECH ROOM", target: 6, id: "tech"},
+            { label: "ENTER CONTAINMENT ROOM", target: 14, id: "containment"}
         ]
     },
     {
@@ -259,10 +260,23 @@ function render() {
     } else if (data.type === "choice") {
         actionBtn.style.display = "none";
         screen.innerHTML = `<p>${data.text}</p><div id="choice-area"></div>`;
+        
         data.choices.forEach(c => {
             const b = document.createElement('button');
             b.innerText = c.label;
-            b.onclick = () => { currentIdx = c.target; render(); };
+            
+            // If they already picked the OTHER room, disable this one
+            if (bioWingSelection && bioWingSelection !== c.id && currentIdx === 13) {
+                b.disabled = true;
+                b.classList.add('btn-disabled');
+                b.innerText += " (LOCKED)";
+            } else {
+                b.onclick = () => { 
+                    if (currentIdx === 13) bioWingSelection = c.id; // Lock the choice
+                    currentIdx = c.target; 
+                    render(); 
+                };
+            }
             screen.querySelector('#choice-area').appendChild(b);
         });
     } else {
