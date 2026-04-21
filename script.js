@@ -4,6 +4,8 @@ let solvedIndices = new Set(); // Tracks completed puzzles
 let hintCharges = 0;
 let currentHintIdx = 0;
 let bioWingSelection = null; // Tracks 'tech' or 'containment'
+let lockedPath = null;
+let visitedIndices = new Set(); // Tracks rooms that already gave rewards
 const content = [
     {
         type: "mode-select",
@@ -54,7 +56,7 @@ const content = [
         text: "Gate cleared. The hallway splits. To your right, the dark **TUNNELS** lead directly toward the laboratory. To your left, a heavy door labeled **BIOLOGICAL WING** hums with power.",
         choices: [
             { label: "ENTER BIOLOGICAL WING", target: 13 },
-            { label: "PROCEED TO TUNNELS", target: 8 }
+            { label: "PROCEED TO TUNNELS", target: 8, id: 'lab'}
         ]
     },
     {
@@ -94,7 +96,7 @@ const content = [
     },
     {
         type: "puzzle",
-        title: "STATION 5: EXPERIMENT LOGS (DATA)",
+        title: "STATION 5: THE EXPERIMENT LOGS (DATA)",
         text: "A terminal shows temperature logs: 15, 18, 20, 22, 25, and X. \n\nThe Median and the Mean of all 6 logs must be exactly 20 to avoid a core leak. What is X?",
         answer: "20",
         visual: '<div style="font-size:1.5em; border: 1px dashed #00ff41; padding: 10px;">[15, 18, 20, 22, 25, X]</div>',
@@ -102,7 +104,7 @@ const content = [
     },
     {
         type: "puzzle",
-        title: "STATION 6: THE SHIELD FORGE (ALGEBRA)",
+        title: "STATION 6: THE ARMORY (ALGEBRA)",
         text: "Experiments are clawing at the door! Forge a shield. \n\nArea must be 75cm². Length must be 10cm longer than width. What is the length of the SHORTER side?",
         answer: "5",
         visual: '<div style="width:70px; height:90px; border:3px solid #00ff41; margin:auto; background:radial-gradient(#004400, #000);"></div>',
@@ -132,7 +134,7 @@ const content = [
     },
     {
         type: "puzzle",
-        title: "STATION 3.1: CONTAINMENT ROOM (LOGIC)",
+        title: "STATION 3.1: THE CONTAINMENT ROOM (LOGIC)",
         text: 'You see 4 chambers labeled 0, 1, 2, 3. On a desk, you see a key, a paper labeled HINT, and a vial inside a glass box. A note on the box reads: “Press the emergency button on the Interface associated with the Mimic experiment to release the lock.” <br><br> Four Interfaces (0, 1, 2, and 3) are mounted on the wall. Interface 0 has been smashed and is completely dark.<br><br> You find a manual saying: <br>1. Only the data log from the Interface belonging to the Level 4 (Maximum Danger) experiment is true. All other  Interfaces provide 100% false data.<br>2. The Stalker is in chamber 1. The experiment in chamber 2 is Level 3.<br> 3. Each chamber (0, 1, 2, 3), Experiment (Mimic, Behemoth, Stalker, Wraith), and Danger Level (1, 2, 3, 4) is used exactly once.<br><br>On the readable interfaces, you see the logs: <br>Interface 1 Log: "The Behemoth is in chamber 3. The Wraith is Level 1."<br>Interface 2 Log: "Interface 1 is Level 4. The Behemoth is in chamber 0."<br>Interface 3 Log: "The Stalker is Level 3. The Behemoth is Level 2."<br>Which Interface number must you press to open the box?',
         answer: "0",
         hints: [
@@ -141,14 +143,44 @@ const content = [
         ]
     },
     {
-        type: "lore",
-        text: "The glass box shatters! You secured the SECURITY KEY, found an EXTRA HINT, and injected the stabilizer vial into the vents. <br><br><strong>[SYSTEM STABILIZED: +5 MINUTES GRANTED]</strong>",
-        btn: "BACK TO TUNNELS",
+        type: "choice",
+        text: "The glass box shatters! You secured the SECURITY KEY, found an EXTRA HINT, and injected the stabilizer vial into the vents. <br><br><strong>[SYSTEM STABILIZED: +5 MINUTES GRANTED]</strong><br><br>In front of you are two tunnels that lead to:<br>1. **THE SLICING ROOM**: A dangerous-looking tunnel, but the scanner dectects an Experiment Stabilizer<br>2. **THE LABORATORY**: Stable and secure.",
         onEntry: () => { 
-            hasKey = true; 
-            hintCharges++; 
-            timeLeft += 5 * 60; 
-            triggerAlert("STABILIZER DETECTED: +5 MINUTES", 2);
+            if (!visitedIndices.has(15)) {
+                hasKey = true; 
+                hintCharges++; 
+                timeLeft += 5 * 60; 
+                triggerAlert("STABILIZER DETECTED: +5 MINUTES", 2);
+                visitedIndices.add(15); // Mark as claimed
+            }
+        },
+        choices: [
+            { label: "ENTER SLICING ROOM (STATION 4.1)", target: 16, id: 'slicer' },
+            { label: "ENTER LABORATORY (STATION 4)", target: 8, id: 'lab' }
+        ]
+    },
+    {
+        type: "puzzle",
+        title: "STATION 4.1: THE SLICING ROOM (FRACTIONS)",
+        text: "Barricade detected. Power the Slicer using Vial D.<br><br>Vial A: 100mL (2/5 acid).<br>Vial B: 5/9 acid, same fuel as Vial A.<br>Vials C+D combined acid = Vial B acid.<br>Vial C: 60mL acid. Vial D: 3/8 acid.<br><br>Acid: Powers 160s per 100mL | Fuel: Powers 64s per 100mL.<br>How many seconds will Vial D run the Slicer?",
+        answer: "40",
+        hints: [
+            "i) Start with Vial A: If 2/5 is acid (40mL), how much is fuel? (60mL).",
+            "ii) Vial B has 60mL fuel. If it's 5/9 acid, it must be 4/9 fuel. Use that to find the total acid in B.",
+            "iii) Total Acid in D = (Acid in B) - (Acid in C). Once you have Acid in D, use the 3/8 ratio to find the fuel in D.",
+            "iv) Calculate run time for Acid and Fuel separately and sum them."
+        ]
+    },
+    {
+        type: "lore",
+        text: "The Slicer carves a hole through the floor! You drop down, bypassing the main laboratory entirely and landing right in front of the Temperature Terminal.<br><br><strong>[SYSTEM STABILIZED: +5 MINUTES GRANTED]</strong>",
+        btn: "ACCESS TERMINAL",
+        onEntry: () => { 
+            if (!visitedIndices.has(17)) {
+                timeLeft += 5 * 60; 
+                triggerAlert("STABILIZER DETECTED: +5 MINUTES", 2);
+                visitedIndices.add(17); // Mark as claimed
+            }
         }
     }
 ];
@@ -207,7 +239,6 @@ function handleFailure() {
         </div>`;
     document.getElementById('footer').style.display = "none";
 }
-
 function render() {
     const screen = document.getElementById('content-area');
     const msg = document.getElementById('feedback-msg');
@@ -215,7 +246,8 @@ function render() {
     const nextBtn = document.getElementById('next-btn');
     const backBtn = document.getElementById('back-btn');
     const data = content[currentIdx];
-    currentHintIdx = 0; // Reset hint progression for the new room
+    
+    currentHintIdx = 0; 
     if (!data) { showFinalScreen(); return; }
     if (data.onEntry) data.onEntry();
 
@@ -224,6 +256,7 @@ function render() {
     nextBtn.classList.add('hidden');
     backBtn.style.visibility = currentIdx > 0 ? "visible" : "hidden";
 
+    // --- BLOCK 1: MODE SELECT ---
     if (data.type === "mode-select") {
         screen.innerHTML = `<h3>${data.text}</h3><div id="choice-area"></div>`;
         data.choices.forEach(c => {
@@ -231,7 +264,7 @@ function render() {
             b.innerText = c.label;
             b.onclick = () => { 
                 hintCharges = c.charges; 
-                timeLeft = c.time * 60; // Set the global timeLeft variable
+                timeLeft = c.time * 60; 
                 document.getElementById('difficulty-display').innerText = `MODE: ${c.mode}`; 
                 updateHintUI(); 
                 currentIdx++; 
@@ -242,7 +275,9 @@ function render() {
         });
         actionBtn.style.display = "none";
         backBtn.style.visibility = "hidden";
-    } else if (data.type === "lore") {
+    } 
+    // --- BLOCK 2: LORE ---
+    else if (data.type === "lore") {
         screen.innerHTML = `<div class="lore-text">${data.text.replace(/\n/g, '<br>')}</div>`;
         actionBtn.style.display = "block";
         actionBtn.innerText = data.btn;
@@ -250,45 +285,58 @@ function render() {
             if (currentIdx === 9 && !hasKey) {
                 msg.innerHTML = `<span class="denied-text">KEY REQUIRED: ACCESS DENIED</span>`;
             } 
-            // If they finish the Tech Room lore (7) OR the Containment rewards lore (15)
-            else if (currentIdx === 7 || currentIdx === 15) { 
-                currentIdx = 8; // Jump straight to the Tunnels
+            else if (currentIdx === 17) { 
+                currentIdx = 10; // Slicer Shortcut to Logs
                 render(); 
             } 
+            else if (currentIdx === 7) {
+                currentIdx = 8; // Tech Room back to Lab
+                render();
+            }
             else { 
                 currentIdx++; 
                 render(); 
             }
         };
-    } else if (data.type === "choice") {
+    } 
+    // --- BLOCK 3: CHOICE (The Logic You Needed) ---
+    else if (data.type === "choice") {
         actionBtn.style.display = "none";
         screen.innerHTML = `<p>${data.text}</p><div id="choice-area"></div>`;
         
         data.choices.forEach(c => {
             const b = document.createElement('button');
-            b.innerText = c.label;
             
-            // If they already picked the OTHER room, disable this one
-            if (bioWingSelection && bioWingSelection !== c.id && currentIdx === 13) {
+            // Check for Bio-Wing Lockout (Tech vs Containment)
+            const isBioLocked = bioWingSelection && bioWingSelection !== c.id && currentIdx === 13;
+            // Check for Path Lockout (Lab vs Slicer)
+            const isPathLocked = lockedPath && lockedPath !== c.id && (c.id === 'lab' || c.id === 'slicer');
+
+            if (isBioLocked || isPathLocked) {
                 b.disabled = true;
                 b.classList.add('btn-disabled');
-                b.innerText += " (LOCKED)";
+                b.innerText = isPathLocked ? (c.id === 'lab' ? "LAB (CAVED IN)" : "SLICER (SEALED)") : c.label + " (LOCKED)";
             } else {
+                b.innerText = c.label;
                 b.onclick = () => { 
-                    if (currentIdx === 13) bioWingSelection = c.id; // Lock the choice
+                    if (currentIdx === 13) bioWingSelection = c.id; 
+                    if (c.id === 'lab') lockedPath = 'lab';
+                    if (c.id === 'slicer') lockedPath = 'slicer';
                     currentIdx = c.target; 
                     render(); 
                 };
             }
             screen.querySelector('#choice-area').appendChild(b);
         });
-    } else {
+    } 
+    // --- BLOCK 4: PUZZLES ---
+    else {
         const isSolved = solvedIndices.has(currentIdx);
-screen.innerHTML = `<h3>${data.title}</h3><p>${data.text.replace(/\n/g, '<br>')}</p>${data.visual || ''}
-    <div id="input-area">
-        <input type="text" id="ans" placeholder="${isSolved ? 'CLEARED' : 'ENTER CODE...'}" ${isSolved ? 'disabled' : ''}>
-        <button onclick="check()" ${isSolved ? 'disabled' : ''}>AUTH</button>
-    </div>`;
+        screen.innerHTML = `<h3>${data.title}</h3><p>${data.text.replace(/\n/g, '<br>')}</p>${data.visual || ''}
+            <div id="input-area">
+                <input type="text" id="ans" placeholder="${isSolved ? 'CLEARED' : 'ENTER CODE...'}" ${isSolved ? 'disabled' : ''}>
+                <button onclick="check()" ${isSolved ? 'disabled' : ''}>AUTH</button>
+            </div>`;
         actionBtn.style.display = "none";
         if (isSolved) { msg.innerHTML = `<span class="auth-text">AUTHENTICATED</span>`; nextBtn.classList.remove('hidden'); }
     }
@@ -382,10 +430,30 @@ function requestHint() {
 function advance() { currentIdx++; render(); }
 function skip() { currentIdx++; render(); }
 function goBack() { 
-    if (currentIdx === 8) currentIdx = 5; // Tunnels -> Hallway Split
-    else if (currentIdx === 13) currentIdx = 5; // Bio Wing -> Hallway Split
-    else if (currentIdx === 6 || currentIdx === 14) currentIdx = 13; // Tech/Containment -> Bio Wing Choice
-    else if (currentIdx > 1) currentIdx--; 
+    // From Lab (8) or Bio-Wing choice (13), go back to Hallway split (5)
+    if (currentIdx === 8 || currentIdx === 13) {
+        currentIdx = 5;
+    }
+    // From Tech Room (6) or 3.1 (14), go back to Bio-Wing choice (13)
+    else if (currentIdx === 6 || currentIdx === 14) {
+        currentIdx = 13;
+    }
+    // From Slicer (16) or Lab-after-3.1 (8), go back to the collapse choice (15)
+    else if (currentIdx === 16 || (currentIdx === 8 && bioWingSelection === 'containment')) {
+        currentIdx = 15;
+    }
+    // FIX: From Station 5 (10), check how we got there
+    else if (currentIdx === 10) {
+        if (lockedPath === 'slicer') {
+            currentIdx = 17; // Go back to Slicer Lore
+        } else {
+            currentIdx = 9;  // Go back to Lab Key Check
+        }
+    }
+    // General linear back navigation
+    else if (currentIdx > 1) {
+        currentIdx--; 
+    }
     render(); 
 }
 
