@@ -116,7 +116,6 @@ const content = [
         title: "STATION 7: THE ROOF (LOGIC)",
         text: "You reach the roof. The rescue helicopter is circling, but you need the final signal frequency.\n\nPatterns identified in previous codes: [-5, 10, 0, 40, 20, 5, ?]\n\nYou have to arrange it such that the first 4 numbers form an arithmetic sequence(addition pattern) and the last 5 numbers form a geometric sequence(multiplication pattern). What is the 7th term in the pattern?",
         answer: "80",
-        visual: '<div style="font-size:3em; animation: pulse 1s infinite alternate;">🚁</div>',
         hints: [
             "i) Organize your first 6 answers, and try to make an addition pattern and a multiplication pattern.",
             "ii) Once you have the multiplication pattern, what is the common ratio?"
@@ -251,11 +250,15 @@ function render() {
             if (currentIdx === 9 && !hasKey) {
                 msg.innerHTML = `<span class="denied-text">KEY REQUIRED: ACCESS DENIED</span>`;
             } 
+            // If they finish the Tech Room lore (7) OR the Containment rewards lore (15)
             else if (currentIdx === 7 || currentIdx === 15) { 
-                currentIdx = 8; 
+                currentIdx = 8; // Jump straight to the Tunnels
                 render(); 
             } 
-            else { currentIdx++; render(); }
+            else { 
+                currentIdx++; 
+                render(); 
+            }
         };
     } else if (data.type === "choice") {
         actionBtn.style.display = "none";
@@ -301,7 +304,13 @@ function check() {
         msg.innerHTML = `<span class="auth-text">AUTHENTICATED</span>`;
         solvedIndices.add(currentIdx);
         input.disabled = true;
-        document.getElementById('next-btn').classList.remove('hidden');
+    
+        // Check if this is the FINAL puzzle (Station 7)
+        if (currentIdx === 12) {
+            setTimeout(showFinalScreen, 1500); // Give them 1.5s to see "AUTHENTICATED"
+        } else {
+            document.getElementById('next-btn').classList.remove('hidden');
+        }
     } else {
         // Calculate penalty: 45 seconds for Station 3.1 (Index 14), 20 for others
         const penaltyTime = (currentIdx === 14) ? 45 : 20;
@@ -382,7 +391,7 @@ function goBack() {
 
 function showFinalScreen() {
     clearInterval(timerInterval);
-    document.getElementById('terminal-screen').innerHTML = `<div style="text-align:center; padding-top:50px;"><h1>CONGRATULATIONS.</h1><p>FACILITY 18 SECURED. YOU ARE SAFE.</p></div>`;
+    document.getElementById('terminal-screen').innerHTML = `<div style="text-align:center; padding-top:50px;"><h1>CONGRATULATIONS.</h1><p>RESCUE HELICOPTER ARRIVED. YOU ARE SAFE.</p></div>`;
     document.getElementById('footer').style.display = "none";
 }
 
