@@ -6,6 +6,8 @@ let currentHintIdx = 0;
 let bioWingSelection = null; // Tracks 'tech' or 'containment'
 let lockedPath = null;
 let visitedIndices = new Set(); // Tracks rooms that already gave rewards
+let lockoutEndTime = 0; // Stores the timestamp when the lock should end
+let activeLockoutInterval = null;
 const content = [
     {
         type: "mode-select",
@@ -105,7 +107,7 @@ const content = [
     {
         type: "puzzle",
         title: "STATION 6: THE ARMORY (ALGEBRA)",
-        text: "Experiments are clawing at the door! Forge a shield. \n\nArea must be 75cm². Length must be 10cm longer than width. What is the length of the SHORTER side?",
+        text: "Experiments are clawing at the door! Forge a shield. \n\nArea must be 75cm². Length must be 10cm longer than width. In cm, what is the length of the SHORTER side?",
         answer: "5",
         visual: '<div style="width:70px; height:90px; border:3px solid #00ff41; margin:auto; background:radial-gradient(#004400, #000);"></div>',
         hints: [
@@ -332,17 +334,27 @@ function render() {
     // --- BLOCK 4: PUZZLES ---
     else {
         const isSolved = solvedIndices.has(currentIdx);
+        const isLocked = (lockoutEndTime - Date.now()) > 0;
         screen.innerHTML = `<h3>${data.title}</h3><p>${data.text.replace(/\n/g, '<br>')}</p>${data.visual || ''}
             <div id="input-area">
                 <input type="text" id="ans" placeholder="${isSolved ? 'CLEARED' : 'ENTER CODE...'}" ${isSolved ? 'disabled' : ''}>
                 <button onclick="check()" ${isSolved ? 'disabled' : ''}>AUTH</button>
             </div>`;
         actionBtn.style.display = "none";
+    
+        if (!isSolved && isLocked) {
+            // Immediately disable so there's no window to type/submit before the timer kicks in
+            const ansInput = document.getElementById('ans');
+            const authBtn = document.querySelector('#input-area button');
+            if (ansInput) ansInput.disabled = true;
+            if (authBtn) { authBtn.disabled = true; authBtn.classList.add('btn-disabled'); }
+            startLockoutTimer();
+        }
         if (isSolved) { msg.innerHTML = `<span class="auth-text">AUTHENTICATED</span>`; nextBtn.classList.remove('hidden'); }
     }
+    
     updateHintUI();
 }
-
 function check() {
     const input = document.getElementById('ans');
     const msg = document.getElementById('feedback-msg');
@@ -352,41 +364,51 @@ function check() {
         msg.innerHTML = `<span class="auth-text">AUTHENTICATED</span>`;
         solvedIndices.add(currentIdx);
         input.disabled = true;
-    
-        // Check if this is the FINAL puzzle (Station 7)
         if (currentIdx === 12) {
-            setTimeout(showFinalScreen, 1500); // Give them 1.5s to see "AUTHENTICATED"
+            setTimeout(showFinalScreen, 1500);
         } else {
             document.getElementById('next-btn').classList.remove('hidden');
         }
     } else {
-        // Calculate penalty: 45 seconds for Station 3.1 (Index 14), 20 for others
         const penaltyTime = (currentIdx === 14) ? 45 : 20;
-        
-        msg.innerHTML = `<span class="denied-text">ACCESS DENIED. SYSTEM LOCKED FOR ${penaltyTime}s</span>`;
-        
-        // Disable input and button
-        input.disabled = true;
-        authBtn.disabled = true;
-        authBtn.classList.add('btn-disabled'); // For styling
-
-        let remaining = penaltyTime;
-        const lockoutInterval = setInterval(() => {
-            remaining--;
-            msg.innerHTML = `<span class="denied-text">ACCESS DENIED. SYSTEM LOCKED FOR ${remaining}s</span>`;
-            
-            if (remaining <= 0) {
-                clearInterval(lockoutInterval);
-                input.disabled = false;
-                authBtn.disabled = false;
-                authBtn.classList.remove('btn-disabled');
-                msg.innerText = "";
-                input.focus();
-            }
-        }, 1000);
+lockoutEndTime = Date.now() + (penaltyTime * 1000);
+startLockoutTimer(); // No need to pass arguments
     }
 }
+function startLockoutTimer() {
+    const input = document.getElementById('ans');
+    const authBtn = document.querySelector('#input-area button');
+    const msg = document.getElementById('feedback-msg');
 
+    if (!input || !authBtn) return;
+
+    // CRITICAL: Stop any "ghost" timers currently running
+    if (activeLockoutInterval) clearInterval(activeLockoutInterval);
+
+    input.disabled = true;
+    authBtn.disabled = true;
+    authBtn.classList.add('btn-disabled');
+
+    activeLockoutInterval = setInterval(() => {
+        const remaining = Math.ceil((lockoutEndTime - Date.now()) / 1000);
+        
+        if (remaining <= 0) {
+            clearInterval(activeLockoutInterval);
+            activeLockoutInterval = null;
+            
+            // Only re-enable if we are still on a puzzle screen
+            if (document.getElementById('ans')) {
+                document.getElementById('ans').disabled = false;
+                document.querySelector('#input-area button').disabled = false;
+                document.querySelector('#input-area button').classList.remove('btn-disabled');
+                msg.innerText = "";
+            }
+            lockoutEndTime = 0; 
+        } else {
+            msg.innerHTML = `<span class="denied-text">ACCESS DENIED. SYSTEM LOCKED FOR ${remaining}s</span>`;
+        }
+    }, 1000);
+}
 function updateHintUI() {
     const counter = document.getElementById('stats-panel'); // Target the panel
     const hintArea = document.getElementById('hint-count');
