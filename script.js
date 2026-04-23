@@ -8,6 +8,8 @@ let lockedPath = null;
 let visitedIndices = new Set(); // Tracks rooms that already gave rewards
 let lockoutEndTime = 0; // Stores the timestamp when the lock should end
 let activeLockoutInterval = null;
+let wrongAnswers = 0;
+const MAX_WRONG = 10;
 const content = [
     {
         type: "mode-select",
@@ -45,7 +47,7 @@ const content = [
         title: "STATION 2: THE HALLWAY (GEOMETRY)",
         text: "Triangular sensor detected (Side lengths: 3, 4, 5). \n\nCalculate the Area of the Great Circle (containing all vertices) divided by the Area of the Small Circle (tangent to, or touching all sides), then multiply the result by 1.6.",
         answer: "10",
-        visual: '<div style="font-size:3em; text-shadow: 0 0 10px #00ff41;">△</div>',
+        visual: '<img src="geometry.png" style="height: 250px; width: 250px; box-shadow: 0px 0px 1000px 12px #00ff41;">',
         hints: [
             "i) Is this a right triangle? If so, why? (Use the Pythagorean Theorem, and draw it out).",
             "ii) This is a hard problem, but the center of the Great Circle is in the middle of the hypotenuse.",
@@ -75,7 +77,7 @@ const content = [
     },
     {
         type: "lore",
-        text: "Interface 0 glows green. A hidden drawer opens, revealing a PHYSICAL SECURITY KEY. You grab it, but the room is a dead end. You must head to the Tunnels.",
+        text: "Interface 0 glows green. A hidden drawer opens, revealing a keycard. You grab it, but the room is a dead end. You must head to the Tunnels.",
         btn: "BACK TO TUNNELS",
         onEntry: () => { hasKey = true; }
     },
@@ -93,8 +95,8 @@ const content = [
     },
     {
         type: "lore",
-        text: "The giant lab door has a physical keyhole. (Checking for Tech Key...)",
-        btn: "USE KEY"
+        text: "The giant lab door has a keycard reader. (Checking for Keycard)",
+        btn: "USE KEYCARD"
     },
     {
         type: "puzzle",
@@ -128,16 +130,16 @@ const content = [
     {
         type: "choice",
         title: "BIOLOGICAL WING",
-        text: "You are inside the Biological Wing. A display panel shows: [CRITICAL ENERGY - 1 DOOR OPENING REMAINING]. <br><br>**Option A: TECH ROOM** (Scanner detects a Security Key inside).<br>**Option B: CONTAINMENT ROOM** (Scanner detects 4 powerful experiments, a Security Key, a Hint, and a 5-minute Experiment Stabilizer vial).",
+        text: "You are inside the Biological Wing. A display panel shows: [CRITICAL ENERGY - 1 DOOR OPENING REMAINING]. <br><br>**Option A: TECH ROOM** (Scanner detects a keycard inside).<br>**Option B: CONTAINMENT ROOM** (Scanner detects dangerous experiments, a keycard, a Hint, and a 5-minute Experiment Stabilizer vial).",
         choices: [
-            { label: "ENTER TECH ROOM", target: 6, id: "tech"},
-            { label: "ENTER CONTAINMENT ROOM", target: 14, id: "containment"}
+            { label: "ENTER TECH ROOM (SAFER)", target: 6, id: "tech"},
+            { label: "ENTER CONTAINMENT ROOM (DANGEROUS)", target: 14, id: "containment"}
         ]
     },
     {
         type: "puzzle",
         title: "STATION 3.1: THE CONTAINMENT ROOM (LOGIC)",
-        text: 'You see 4 chambers labeled 0, 1, 2, 3. On a desk, you see a key, a paper labeled HINT, and a vial inside a glass box. A note on the box reads: “Press the emergency button on the Interface associated with the Mimic experiment to release the lock.” <br><br> Four Interfaces (0, 1, 2, and 3) are mounted on the wall. Interface 0 has been smashed and is completely dark.<br><br> You find a manual saying: <br>1. Only the data log from the Interface belonging to the Level 4 (Maximum Danger) experiment is true. All other  Interfaces provide 100% false data.<br>2. The Stalker is in chamber 1. The experiment in chamber 2 is Level 3.<br> 3. Each chamber (0, 1, 2, 3), Experiment (Mimic, Behemoth, Stalker, Wraith), and Danger Level (1, 2, 3, 4) is used exactly once.<br><br>On the readable interfaces, you see the logs: <br>Interface 1 Log: "The Behemoth is in chamber 3. The Wraith is Level 1."<br>Interface 2 Log: "Interface 1 is Level 4. The Behemoth is in chamber 0."<br>Interface 3 Log: "The Stalker is Level 3. The Behemoth is Level 2."<br>Which Interface number must you press to open the box?',
+        text: 'You see 4 chambers labeled 0, 1, 2, 3. On a desk, you see a keycard, a paper labeled HINT, and a vial inside a glass box. A note on the box reads: “Press the emergency button on the Interface associated with the Mimic experiment to release the lock.” <br><br> Four Interfaces (0, 1, 2, and 3) are mounted on the wall. Interface 0 has been smashed and is completely dark.<br><br> You find a manual saying: <br>1. Only the data log from the Interface belonging to the Level 4 (Maximum Danger) experiment is true. All other  Interfaces provide 100% false data.<br>2. The Stalker is in chamber 1. The experiment in chamber 2 is Level 3.<br> 3. Each chamber (0, 1, 2, 3), Experiment (Mimic, Behemoth, Stalker, Wraith), and Danger Level (1, 2, 3, 4) is used exactly once.<br><br>On the readable interfaces, you see the logs: <br>Interface 1 Log: "The Behemoth is in chamber 3. The Wraith is Level 1."<br>Interface 2 Log: "Interface 1 is Level 4. The Behemoth is in chamber 0."<br>Interface 3 Log: "The Stalker is Level 3. The Behemoth is Level 2."<br>Which Interface number must you press to open the box?',
         answer: "0",
         hints: [
             "i) Identify the truth-telling interface (Level 4). Can INT 1 be Level 4? If it were, then INT 2's claim that INT 1 is Level 4 would be true... but only one interface tells the truth!",
@@ -157,8 +159,8 @@ const content = [
             }
         },
         choices: [
-            { label: "ENTER SLICING ROOM (STATION 4.1)", target: 16, id: 'slicer' },
-            { label: "ENTER LABORATORY (STATION 4)", target: 8, id: 'lab' }
+            { label: "ENTER SLICING ROOM (DANGEROUS)", target: 16, id: 'slicer' },
+            { label: "ENTER LABORATORY (SAFER)", target: 8, id: 'lab' }
         ]
     },
     {
@@ -370,11 +372,38 @@ function check() {
             document.getElementById('next-btn').classList.remove('hidden');
         }
     } else {
-        const penaltyTime = (currentIdx === 14) ? 45 : 20;
-lockoutEndTime = Date.now() + (penaltyTime * 1000);
-startLockoutTimer(); // No need to pass arguments
+    wrongAnswers++;
+    document.getElementById('wrong-count').innerText = `ERRORS: ${wrongAnswers}/10`;
+    
+    // Lose 1 minute
+    timeLeft = Math.max(0, timeLeft - 60);
+
+    if (wrongAnswers >= MAX_WRONG) {
+        clearInterval(timerInterval);
+        clearInterval(activeLockoutInterval);
+        document.body.classList.remove('emergency-panic-mode');
+        document.getElementById('terminal-screen').innerHTML = `
+            <div style="text-align:center; padding-top:80px; color: #ff0000; font-family: 'Courier New', monospace;">
+                <h1 style="font-size:3.5em; text-shadow: 0 0 20px #ff0000;">CONTAINMENT FAILED</h1>
+                <p style="font-size:1.3em; letter-spacing: 2px;">10 INCORRECT ATTEMPTS DETECTED.</p>
+                <p>EMERGENCY CONTAINMENT FAILED. EXPERIMENTS HAVE BEEN UNLEASHED.</p>
+                <button onclick="location.reload()" style="background: #ff0000; color: #fff; border: none; padding: 15px 30px; cursor: pointer; margin-top:30px;">REBOOT</button>
+            </div>`;
+        document.getElementById('footer').style.display = "none";
+        return;
     }
+
+    const remaining = MAX_WRONG - wrongAnswers;
+    if (remaining <= 3) triggerAlert(`⚠ CRITICAL: ${remaining} ERROR${remaining === 1 ? '' : 'S'} REMAINING — EXPERIMENTS STIRRING`, 2);
+    else if (remaining <= 5) triggerAlert(`WARNING: ${remaining} ERRORS REMAINING. -1 MINUTE DEDUCTED.`, 1);
+    else triggerAlert(`ACCESS DENIED. -1 MINUTE DEDUCTED. ${remaining} ERRORS REMAINING.`, 1);
+
+    const penaltyTime = 5;
+    lockoutEndTime = Date.now() + (penaltyTime * 1000);
+    startLockoutTimer();
 }
+}
+
 function startLockoutTimer() {
     const input = document.getElementById('ans');
     const authBtn = document.querySelector('#input-area button');
