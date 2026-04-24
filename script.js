@@ -47,7 +47,7 @@ const content = [
         title: "STATION 2: THE HALLWAY (GEOMETRY)",
         text: "Triangular sensor detected (Side lengths: 3, 4, 5). \n\nCalculate the Area of the Great Circle (containing all vertices) divided by the Area of the Small Circle (tangent to, or touching all sides), then multiply the result by 1.6.",
         answer: "10",
-        visual: '<img src="geometry.png" style="height: 250px; width: 250px; box-shadow: 0px 0px 1000px 12px #00ff41;">',
+        visual: '<img src="geometry.png" style="height: 250px; width: 250px;">',
         hints: [
             "i) Is this a right triangle? If so, why? (Use the Pythagorean Theorem, and draw it out).",
             "ii) This is a hard problem, but the center of the Great Circle is in the middle of the hypotenuse.",
